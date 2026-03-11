@@ -8,11 +8,11 @@ if not DATABASE_URL:
     os.makedirs(DB_DIR, exist_ok=True)
     DATABASE_URL = f"sqlite:///{os.path.join(DB_DIR, 'prediction_market.db')}"
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    echo=False,
-)
+engine_kwargs = {"echo": False}
+if DATABASE_URL.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(DATABASE_URL, **engine_kwargs)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

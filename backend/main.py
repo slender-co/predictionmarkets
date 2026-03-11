@@ -1,5 +1,6 @@
 import sys
 import os
+import logging
 from pathlib import Path
 
 # Add backend directory to path so engine/models/etc. can be imported
@@ -16,6 +17,8 @@ from models import ModelSettings, CalibrationLog
 from routers import sessions, terms, base_rates, analysis, settings
 from routers.source_events import router as source_events_router
 from schemas import CalibrationLogResponse
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Prediction Market Stat Arb Engine",
@@ -41,15 +44,20 @@ app.include_router(source_events_router)
 
 @app.on_event("startup")
 def startup():
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
     try:
-        existing = db.get(ModelSettings, 1)
-        if not existing:
-            db.add(ModelSettings(id=1))
-            db.commit()
-    finally:
-        db.close()
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        try:
+            existing = db.get(ModelSettings, 1)
+            if not existing:
+                db.add(ModelSettings(id=1))
+                db.commit()
+        finally:
+            db.close()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        # Don't crash — healthcheck and API should still respond
 
 
 @app.get("/api/health")
